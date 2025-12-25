@@ -31,6 +31,7 @@ async function run() {
 
     const districtCollection = client.db("pollingStation").collection("districts");
     const upazilaCollection = client.db("pollingStation").collection("upazilas");
+    const unionCollection = client.db("pollingStation").collection("unions");
     const pollingStationCollection = client.db("pollingStation").collection("pollingStations");
     
       // district route
@@ -77,6 +78,162 @@ async function run() {
         };
 
         const result = await districtCollection.updateOne(
+          filter,
+          updatedData,
+          option
+        );
+        res.send(result);
+      });
+
+      // Upazila Route
+
+       app.post("/upazilas", async (req, res) => {
+        const upazilas = req.body;
+         console.log("Upazila Info: ", upazilas);
+        const result = await upazilaCollection.insertOne(upazilas);
+        console.log("Upazila Info: ", result);
+        res.send(result);
+      });
+
+      app.get("/upazilas", async (req, res) => {
+        const query = upazilaCollection.find();
+        const result = await query.toArray();
+        res.send(result);
+      });
+
+      app.delete("/upazila/:id", async (req, res) => {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await upazilaCollection.deleteOne(query);
+        res.send(result);
+      });
+  
+      app.get("/upazila/:id", async (req, res) => {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await upazilaCollection.findOne(query);
+        res.send(result);
+      });
+
+       app.put("/upazila/:id", async (req, res) => {
+        const uId = req.params.id;
+        console.log("Update Data Found",uId);
+        const upazila = req.body;
+        const filter = { _id: new ObjectId(uId) };
+        const option = { upsert: true };
+        
+        const updatedData = {
+          $set: {
+            upazilaName: upazila.districtName,
+            districtName: upazila.districtName,
+          },
+        };
+
+        const result = await upazilaCollection.updateOne(
+          filter,
+          updatedData,
+          option
+        );
+        res.send(result);
+      });
+
+      // Union Route
+
+       app.post("/unions", async (req, res) => {
+        const unionData = req.body;
+         console.log("Union Info: ", unionData);
+        const result = await unionCollection.insertOne(unionData);
+        console.log("Union Info: ", result);
+        res.send(result);
+      });
+
+      app.get("/unions", async (req, res) => {
+        const query = unionCollection.find();
+        const result = await query.toArray();
+        res.send(result);
+      });
+
+      app.delete("/union/:id", async (req, res) => {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await unionCollection.deleteOne(query);
+        res.send(result);
+      });
+  
+      app.get("/union/:id", async (req, res) => {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await unionCollection.findOne(query);
+        res.send(result);
+      });
+
+       app.put("/union/:id", async (req, res) => {
+        const uId = req.params.id;
+        console.log("Update Data Found",uId);
+        const union = req.body;
+        const filter = { _id: new ObjectId(uId) };
+        const option = { upsert: true };
+        
+        const updatedData = {
+          $set: {
+            upazilaName: union.upazilaName,
+            unionName: union.unionName,
+          },
+        };
+
+        const result = await unionCollection.updateOne(
+          filter,
+          updatedData,
+          option
+        );
+        res.send(result);
+      });
+
+       // Polling Station Route
+
+       app.post("/pollingStations", async (req, res) => {
+        const pollingStationData = req.body;
+        console.log("Polling Station Info: ", pollingStationData);
+        const result = await pollingStationCollection.insertOne(pollingStationData);
+        console.log("Polling Station: ", result);
+        res.send(result);
+      });
+
+      app.get("/pollingStations", async (req, res) => {
+        const query = pollingStationCollection.find();
+        const result = await query.toArray();
+        res.send(result);
+      });
+
+      app.delete("/pollingStation/:id", async (req, res) => {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await pollingStationCollection.deleteOne(query);
+        res.send(result);
+      });
+  
+      app.get("/pollingStation/:id", async (req, res) => {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await pollingStationCollection.findOne(query);
+        res.send(result);
+      });
+
+       app.put("/pollingStation/:id", async (req, res) => {
+        const psId = req.params.id;
+        console.log("Update Data Found",psId);
+        const pollingStation = req.body;
+        const filter = { _id: new ObjectId(psId) };
+        const option = { upsert: true };
+        
+        const updatedData = {
+          $set: {
+         //   upazilaName: pollingStation.upazilaName,
+          //  unionName: pollingStation.unionName,
+          },
+        };
+
+        const result = await pollingStationCollection.updateOne(
           filter,
           updatedData,
           option
