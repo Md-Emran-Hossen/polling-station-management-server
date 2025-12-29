@@ -108,6 +108,25 @@ async function run() {
         res.send(result);
       });
   
+
+      /*
+      app.get("/categoryy/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { categoryId: id };
+      const result = await bookCollection.find(query).toArray();
+      console.log("Check HIT", result);
+      res.send(result);
+
+    }); */
+
+    app.get("/upazilaData/:id", async (req, res) => {
+        const id = req.params.id;
+        console.log("UPAZILA DATA FUNCTION CALL");
+        const query = { districtID: id };
+        const result = await upazilaCollection.find(query).toArray();;
+        res.send(result);
+      });
+
       app.get("/upazila/:id", async (req, res) => {
         const id = req.params.id;
         const query = { _id: new ObjectId(id) };
@@ -218,6 +237,25 @@ async function run() {
         const result = await pollingStationCollection.findOne(query);
         res.send(result);
       });
+
+       app.get("/pollingStations/pollingStation/:id", async (req, res) => {
+        const id = req.params.id;
+        if(id === '69499f421d1713986d14156a'){
+           const distQuery = { districtID: id };
+           const distResult = await pollingStationCollection.find(distQuery).toArray();
+           res.send(distResult);
+        }
+        else{
+           const upaQuery = { upazilaID: id };
+           const upaResult = await pollingStationCollection.find(upaQuery).toArray();
+           res.send(upaResult);
+        } 
+        // console.log("QUERY DATA: ", query);
+        // const result = await pollingStationCollection.find(query).toArray();
+        // console.log("RESULT DATA: ", result);
+        // res.send(result);
+      });
+
 
        app.put("/pollingStation/:id", async (req, res) => {
         const psId = req.params.id;
