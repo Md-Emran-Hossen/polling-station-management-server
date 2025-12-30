@@ -1,18 +1,21 @@
  const express = require("express");
  const cors = require("cors");
+ require("dotenv").config();
+ 
  const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
  const app = express();
-
  const port = process.env.PORT || 5000;
 
  app.use(cors());
  app.use(express.json());
 
  //DB User: polling_station_db_user
- //DB Pass: vT1b7agAK2ZylwM3
+ //DB Pass: VWBWydTDxADFrwFc
  
-const uri = "mongodb+srv://polling_station_db_user:VWBWydTDxADFrwFc@cluster0.ikm2v.mongodb.net/?appName=Cluster0";
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_SECRET}@cluster0.ikm2v.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
+
+       //      "mongodb+srv://polling_station_db_user:VWBWydTDxADFrwFc@cluster0.ikm2v.mongodb.net/?appName=Cluster0";
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -26,7 +29,7 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+   await client.connect();
     // Send a ping to confirm a successful connection
 
     const districtCollection = client.db("pollingStation").collection("districts");
@@ -107,23 +110,20 @@ async function run() {
         const result = await upazilaCollection.deleteOne(query);
         res.send(result);
       });
-  
 
-      /*
-      app.get("/categoryy/:id", async (req, res) => {
-      const id = req.params.id;
-      const query = { categoryId: id };
-      const result = await bookCollection.find(query).toArray();
-      console.log("Check HIT", result);
-      res.send(result);
-
-    }); */
-
-    app.get("/upazilaData/:id", async (req, res) => {
+    app.get("/loadUpazila/:id", async (req, res) => {
         const id = req.params.id;
-        console.log("UPAZILA DATA FUNCTION CALL");
+        // console.log("UPAZILA DATA FUNCTION CALL");
         const query = { districtID: id };
         const result = await upazilaCollection.find(query).toArray();;
+        res.send(result);
+      });
+
+      app.get("/loadUnion/:id", async (req, res) => {
+        const id = req.params.id;
+        //  console.log("UNION DATA FUNCTION CALL");
+        const query = { upazilaID: id };
+        const result = await unionCollection.find(query).toArray();;
         res.send(result);
       });
 
@@ -240,20 +240,36 @@ async function run() {
 
        app.get("/pollingStations/pollingStation/:id", async (req, res) => {
         const id = req.params.id;
-        if(id === '69499f421d1713986d14156a'){
-           const distQuery = { districtID: id };
-           const distResult = await pollingStationCollection.find(distQuery).toArray();
-           res.send(distResult);
-        }
-        else{
-           const upaQuery = { upazilaID: id };
-           const upaResult = await pollingStationCollection.find(upaQuery).toArray();
-           res.send(upaResult);
-        } 
+        // if(id === '69499f421d1713986d14156a'){
+           const Query = { districtID: id };
+           const Result = await pollingStationCollection.find(Query).toArray();
+           res.send(Result);
+        // }
+        // else{
+        //    const upaQuery = { upazilaID: id };
+        //    const upaResult = await pollingStationCollection.find(upaQuery).toArray();
+        //    res.send(upaResult);
+        // } 
         // console.log("QUERY DATA: ", query);
         // const result = await pollingStationCollection.find(query).toArray();
         // console.log("RESULT DATA: ", result);
         // res.send(result);
+      });
+
+      // filter by selected Upazila
+      app.get("/pollingStations/pollingStation/upazila/:id", async (req, res) => {
+          const id = req.params.id;
+           const Query = { upazilaID: id };
+           const Result = await pollingStationCollection.find(Query).toArray();
+           res.send(Result);
+      });
+
+      // filter by selected union
+      app.get("/pollingStations/pollingStation/union/:id", async (req, res) => {
+        const id = req.params.id;
+           const Query = { unionID: id };
+           const Result = await pollingStationCollection.find(Query).toArray();
+           res.send(Result);
       });
 
 
@@ -280,8 +296,8 @@ async function run() {
       });
 
 
-    await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+   await client.db("admin").command({ ping: 1 });
+   console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     // Ensures that the client will close when you finish/error
   //  await client.close();
