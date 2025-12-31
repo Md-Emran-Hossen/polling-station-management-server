@@ -36,6 +36,7 @@ async function run() {
     const upazilaCollection = client.db("pollingStation").collection("upazilas");
     const unionCollection = client.db("pollingStation").collection("unions");
     const pollingStationCollection = client.db("pollingStation").collection("pollingStations");
+    const summaryCollection = client.db("pollingStation").collection("summaryInformations");
     
       // district route
       app.post("/districts", async (req, res) => {
@@ -295,6 +296,63 @@ async function run() {
         res.send(result);
       });
 
+       // Summary Route
+
+       app.post("/summaryInformations", async (req, res) => {
+        const summaryData = req.body;
+        const result = await summaryCollection.insertOne(summaryData);
+        console.log("Summary Data: ", result);
+        res.send(result);
+      });
+
+      app.get("/summaryInformations", async (req, res) => {
+        const query = summaryCollection.find();
+        const result = await query.toArray();
+        res.send(result);
+      });
+
+      app.delete("/summaryInformation/:id", async (req, res) => {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await summaryCollection.deleteOne(query);
+        res.send(result);
+      });
+  
+      app.get("/summaryInformation/:id", async (req, res) => {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await summaryCollection.findOne(query);
+        res.send(result);
+      });
+
+       app.get("/pollingStations/summaryInformation/:id", async (req, res) => {
+        const id = req.params.id;
+           const Query = { upazilaID: id };
+           const Result = await summaryInformation.find(Query).toArray();
+           res.send(Result);
+      });
+
+       app.put("/summaryInformation/:id", async (req, res) => {
+        const sId = req.params.id;
+        console.log("Update Data Found",sId);
+        const summary = req.body;
+        const filter = { _id: new ObjectId(sId) };
+        const option = { upsert: true };
+        
+        const updatedData = {
+          $set: {
+         //   upazilaName: pollingStation.upazilaName,
+          //  unionName: pollingStation.unionName,
+          },
+        };
+
+        const result = await summaryInformation.updateOne(
+          filter,
+          updatedData,
+          option
+        );
+        res.send(result);
+      });
 
    await client.db("admin").command({ ping: 1 });
    console.log("Pinged your deployment. You successfully connected to MongoDB!");
