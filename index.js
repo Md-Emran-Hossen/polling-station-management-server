@@ -5,6 +5,12 @@
  const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
  const app = express();
+
+app.use((req, res, next) => {
+  res.setHeader("Content-Security-Policy", "default-src 'self'; connect-src 'self' http://localhost:5000;");
+  next();
+});
+
  const port = process.env.PORT || 5000;
 
  app.use(cors());
@@ -283,8 +289,22 @@ async function run() {
         
         const updatedData = {
           $set: {
-         //   upazilaName: pollingStation.upazilaName,
-          //  unionName: pollingStation.unionName,
+                  districtName: pollingStation.districtName,
+                  upazilaName: pollingStation.upazilaName,
+                  unionName: pollingStation.unionName,
+                  pollingStationNo: pollingStation.pollingStationNo, 
+                  pollingStationName: pollingStation.pollingStationName, 
+                  numberOfBooth: pollingStation.numberOfBooth, 
+                  wordNoAndVillage: pollingStation.wordNoAndVillage,
+                  pollingStationType: pollingStation.pollingStationType,
+                  permanentBooth: pollingStation.permanentBooth,
+                  temporaryBooth: pollingStation.temporaryBooth,
+                  male: pollingStation.male,
+                  female: pollingStation.female,
+                  thirdGender: pollingStation.thirdGender,
+                  totalVoter: pollingStation.totalVoter,
+                  parliamentarySeat: pollingStation.parliamentarySeat,
+                  mapInfo: pollingStation.mapInfo
           },
         };
 
@@ -301,7 +321,7 @@ async function run() {
        app.post("/summaryInformations", async (req, res) => {
         const summaryData = req.body;
         const result = await summaryCollection.insertOne(summaryData);
-        console.log("Summary Data: ", result);
+        // console.log("Summary Data: ", result);
         res.send(result);
       });
 
@@ -325,28 +345,41 @@ async function run() {
         res.send(result);
       });
 
-       app.get("/pollingStations/summaryInformation/:id", async (req, res) => {
+       app.get("/summaryInformations/summaryInformation/:id", async (req, res) => {
         const id = req.params.id;
+        console.log("ID FOUND:", id);
            const Query = { upazilaID: id };
-           const Result = await summaryInformation.find(Query).toArray();
+           const Result = await summaryCollection.find(Query).toArray();
            res.send(Result);
       });
 
        app.put("/summaryInformation/:id", async (req, res) => {
         const sId = req.params.id;
         console.log("Update Data Found",sId);
-        const summary = req.body;
+        const summaryInfo = req.body;
         const filter = { _id: new ObjectId(sId) };
         const option = { upsert: true };
         
         const updatedData = {
           $set: {
-         //   upazilaName: pollingStation.upazilaName,
-          //  unionName: pollingStation.unionName,
+            upazilaName: summaryInfo.upazilaName,
+            numberOfUnion: summaryInfo.numberOfUnion,
+            numberOfPourosova: summaryInfo.numberOfPourosova,
+            permanentPollingStation: summaryInfo.permanentPollingStation,
+            temporaryPollingStation: summaryInfo.temporaryPollingStation,
+            totalPollingStation: summaryInfo.totalPollingStation,
+            permanentBooth: summaryInfo.permanentBooth,
+            temporaryBooth: summaryInfo.temporaryBooth,
+            totalBooth: summaryInfo.totalBooth,
+            maleVoter: summaryInfo.maleVoter,
+            femaleVoter: summaryInfo.femaleVoter,
+            thirdGender: summaryInfo.thirdGender,
+            totalVoter: summaryInfo.totalVoter,
+            comments: summaryInfo.comments,
           },
         };
 
-        const result = await summaryInformation.updateOne(
+        const result = await summaryCollection.updateOne(
           filter,
           updatedData,
           option
