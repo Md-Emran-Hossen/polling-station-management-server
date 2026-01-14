@@ -6,6 +6,8 @@
 
  const app = express();
 
+
+ // Handle CSP (Content Security Policy)
 app.use((req, res, next) => {
   res.setHeader("Content-Security-Policy", "default-src 'self'; connect-src 'self' http://localhost:5000;");
   next();
@@ -43,7 +45,8 @@ async function run() {
     const unionCollection = client.db("pollingStation").collection("unions");
     const pollingStationCollection = client.db("pollingStation").collection("pollingStations");
     const summaryCollection = client.db("pollingStation").collection("summaryInformations");
-    
+    const psCollection = client.db("pollingStation").collection("prisidingOfficers");
+
       // district route
       app.post("/districts", async (req, res) => {
         const districts = req.body;
@@ -167,9 +170,7 @@ async function run() {
 
        app.post("/unions", async (req, res) => {
         const unionData = req.body;
-         console.log("Union Info: ", unionData);
         const result = await unionCollection.insertOne(unionData);
-        console.log("Union Info: ", result);
         res.send(result);
       });
 
@@ -217,11 +218,9 @@ async function run() {
 
        // Polling Station Route
 
-       app.post("/pollingStations", async (req, res) => {
+      app.post("/pollingStations", async (req, res) => {
         const pollingStationData = req.body;
-        console.log("Polling Station Info: ", pollingStationData);
         const result = await pollingStationCollection.insertOne(pollingStationData);
-        console.log("Polling Station: ", result);
         res.send(result);
       });
 
@@ -230,6 +229,46 @@ async function run() {
         const result = await query.toArray();
         res.send(result);
       });
+
+     // fetch data from join collections 
+      app.get("/aggregated-pollingStations", async (req, res) => {
+              try {
+            // const ordersCollection = db.collection('orders');
+
+            const pipeline = [
+              {
+                $lookup: {
+                  from: 'unions', // The foreign collection name
+                  let: { unionIdString: '$unionID' }, // Define a variable from the local field (string type)
+                  pipeline: [
+                    {
+                      $match: {
+                        $expr: {
+                          // Convert the local string variable to ObjectId for matching with foreign _id (ObjectId type)
+                          $eq: ['$_id', { $toObjectId: '$$unionIdString' }]
+                        }
+                      }
+                    }
+                  ],
+                  as: 'pollingStationDetails' // Name of the new array field with joined data
+                }
+              },
+              {
+                $unwind: {
+                  path: '$pollingStationDetails', // Deconstruct the array field
+                  preserveNullAndEmptyArrays: true // Optional: keeps documents if no match is found
+                }
+              },
+            ];
+
+            const aggregatedPollingStations = await pollingStationCollection.aggregate(pipeline).toArray();
+
+            res.status(200).json(aggregatedPollingStations);
+          } catch (error) {
+            console.error(error);
+            res.status(500).send('Error aggregating data');
+          }
+        });
 
       app.delete("/pollingStation/:id", async (req, res) => {
         const id = req.params.id;
@@ -247,20 +286,9 @@ async function run() {
 
        app.get("/pollingStations/pollingStation/:id", async (req, res) => {
         const id = req.params.id;
-        // if(id === '69499f421d1713986d14156a'){
            const Query = { districtID: id };
            const Result = await pollingStationCollection.find(Query).toArray();
            res.send(Result);
-        // }
-        // else{
-        //    const upaQuery = { upazilaID: id };
-        //    const upaResult = await pollingStationCollection.find(upaQuery).toArray();
-        //    res.send(upaResult);
-        // } 
-        // console.log("QUERY DATA: ", query);
-        // const result = await pollingStationCollection.find(query).toArray();
-        // console.log("RESULT DATA: ", result);
-        // res.send(result);
       });
 
       // filter by selected Upazila
@@ -279,10 +307,8 @@ async function run() {
            res.send(Result);
       });
 
-
        app.put("/pollingStation/:id", async (req, res) => {
         const psId = req.params.id;
-        console.log("Update Data Found",psId);
         const pollingStation = req.body;
         const filter = { _id: new ObjectId(psId) };
         const option = { upsert: true };
@@ -304,7 +330,9 @@ async function run() {
                   thirdGender: pollingStation.thirdGender,
                   totalVoter: pollingStation.totalVoter,
                   parliamentarySeat: pollingStation.parliamentarySeat,
-                  mapInfo: pollingStation.mapInfo
+                  mapInfo: pollingStation.mapInfo,
+                  prisidingOffcer: pollingStation.prisidingOffcer,
+                  mobile: pollingStation.mobile,
           },
         };
 
@@ -345,7 +373,7 @@ async function run() {
         res.send(result);
       });
 
-       app.get("/summaryInformations/summaryInformation/:id", async (req, res) => {
+      app.get("/summaryInformations/summaryInformation/:id", async (req, res) => {
         const id = req.params.id;
         console.log("ID FOUND:", id);
            const Query = { upazilaID: id };
@@ -355,7 +383,6 @@ async function run() {
 
        app.put("/summaryInformation/:id", async (req, res) => {
         const sId = req.params.id;
-        console.log("Update Data Found",sId);
         const summaryInfo = req.body;
         const filter = { _id: new ObjectId(sId) };
         const option = { upsert: true };
@@ -387,6 +414,45 @@ async function run() {
         res.send(result);
       });
 
+      app.post("/prisidingOfficers", async (req, res) => {
+        const psOfficer = req.body;
+        const result = await psCollection.insertOne(psOfficer);
+        res.send(result);
+      });
+
+      app.get("/prisidingOfficers", async (req, res) => {
+        const query = psCollection.find();
+        const result = await query.toArray();
+        res.send(result);
+      });
+
+      app.delete("/prisidingOfficer/:id", async (req, res) => {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await psCollection.deleteOne(query);
+        res.send(result);
+      });
+
+       app.put("/prisidingOfficer/:id", async (req, res) => {
+        const psoId = req.params.id;
+        const psoInfo = req.body;
+        const filter = { _id: new ObjectId(psoId) };
+        const option = { upsert: true };
+        
+        const updatedData = {
+          $set: {
+            prisidingOffcer: psoInfo.prisidingOffcer,
+            mobile: psoInfo.mobile,
+          },
+        };
+        const result = await districtCollection.updateOne(
+          filter,
+          updatedData,
+          option
+        );
+        res.send(result);
+      });
+
    await client.db("admin").command({ ping: 1 });
    console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
@@ -397,7 +463,6 @@ async function run() {
 run().catch((error)=>{
     console.log(error);
 });
-
 
  app.get('/',(req, res)=>{
     res.send("Polling Station Management Server is Running!");
