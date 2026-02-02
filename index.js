@@ -65,6 +65,14 @@ async function run() {
         res.send(result);
       });
 
+       // filter by selected Upazila
+      app.get("/magistrates/magistrate/:id", async (req, res) => {
+          const id = req.params.id;
+           const Query = { upazilaID: id };
+           const Result = await magistrateCollection.find(Query).toArray();
+           res.send(Result);
+      });
+
       app.delete("/magistrate/:id", async (req, res) => {
         const id = req.params.id;
         const query = { _id: new ObjectId(id) };
@@ -115,6 +123,14 @@ async function run() {
         res.send(result);
       });
 
+      // filter by selected Upazila
+      app.get("/rabs/rab/:id", async (req, res) => {
+          const id = req.params.id;
+           const Query = { upazilaID: id };
+           const Result = await rabCollection.find(Query).toArray();
+           res.send(Result);
+      });
+
       app.delete("/rab/:id", async (req, res) => {
         const id = req.params.id;
         const query = { _id: new ObjectId(id) };
@@ -162,6 +178,13 @@ async function run() {
         const query = policeCollection.find();
         const result = await query.toArray();
         res.send(result);
+      });
+       // filter by selected Upazila
+      app.get("/polices/police/:id", async (req, res) => {
+          const id = req.params.id;
+           const Query = { upazilaID: id };
+           const Result = await policeCollection.find(Query).toArray();
+           res.send(Result);
       });
 
       app.delete("/police/:id", async (req, res) => {
@@ -213,6 +236,14 @@ async function run() {
         res.send(result);
       });
 
+       // filter by selected Upazila
+      app.get("/bgbs/bgb/:id", async (req, res) => {
+          const id = req.params.id;
+           const Query = { upazilaID: id };
+           const Result = await bgbCollection.find(Query).toArray();
+           res.send(Result);
+      });
+
       app.delete("/bgb/:id", async (req, res) => {
         const id = req.params.id;
         const query = { _id: new ObjectId(id) };
@@ -260,6 +291,14 @@ async function run() {
         const query = armyCollection.find();
         const result = await query.toArray();
         res.send(result);
+      });
+
+       // filter by selected Upazila
+      app.get("/armys/army/:id", async (req, res) => {
+          const id = req.params.id;
+           const Query = { upazilaID: id };
+           const Result = await armyCollection.find(Query).toArray();
+           res.send(Result);
       });
 
       app.delete("/army/:id", async (req, res) => {
