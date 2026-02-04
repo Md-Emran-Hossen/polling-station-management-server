@@ -436,18 +436,15 @@ async function run() {
 
        app.put("/upazila/:id", async (req, res) => {
         const uId = req.params.id;
-        console.log("Update Data Found",uId);
         const upazila = req.body;
         const filter = { _id: new ObjectId(uId) };
         const option = { upsert: true };
         
         const updatedData = {
           $set: {
-            upazilaName: upazila.districtName,
-            districtName: upazila.districtName,
+            upazilaName: upazila.upazilaName,
           },
         };
-
         const result = await upazilaCollection.updateOne(
           filter,
           updatedData,
@@ -493,7 +490,6 @@ async function run() {
         
         const updatedData = {
           $set: {
-            upazilaName: union.upazilaName,
             unionName: union.unionName,
           },
         };
