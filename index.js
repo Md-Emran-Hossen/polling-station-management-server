@@ -51,6 +51,62 @@ async function run() {
     const policeCollection = client.db("pollingStation").collection("polices");
     const rabCollection = client.db("pollingStation").collection("rabs");
     const magistrateCollection = client.db("pollingStation").collection("magistrates");
+    const mapCollection = client.db("pollingStation").collection("maps");
+
+    // map route
+    app.post("/maps", async (req, res) => {
+        const mapInfo = req.body;
+        const result = await mapCollection.insertOne(mapInfo);
+        res.send(result);
+      });
+
+      app.get("/maps", async (req, res) => {
+        const query = mapCollection.find();
+        const result = await query.toArray();
+        res.send(result);
+      });
+
+      app.delete("/map/:id", async (req, res) => {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await mapCollection.deleteOne(query);
+        res.send(result);
+      });
+  
+      app.get("/map/:id", async (req, res) => {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await mapCollection.findOne(query);
+        res.send(result);
+      });
+
+       // filter by selected Upazila
+      app.get("/maps/map/:id", async (req, res) => {
+          const id = req.params.id;
+          const Query = { upazilaID: id };
+          const Result = await mapCollection.find(Query).toArray();
+          res.send(Result);
+      });
+
+      app.put("/map/:id", async (req, res) => {
+        const mId = req.params.id;
+        const mapInfo = req.body;
+        const filter = { _id: new ObjectId(mId) };
+        const option = { upsert: true };
+        
+        const updatedData = {
+          $set: {
+            mapLink: mapInfo.mapLink,
+          },
+        };
+        const result = await mapCollection.updateOne(
+          filter,
+          updatedData,
+          option
+        );
+        res.send(result);
+      });
+
 
    // magistrate route
     app.post("/magistrates", async (req, res) => {
