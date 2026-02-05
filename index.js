@@ -1,4 +1,9 @@
  const express = require("express");
+
+ const multer = require('multer');
+ const xlsx = require('xlsx');
+
+ const helmet = require("helmet");
  const cors = require("cors");
  require("dotenv").config();
  
@@ -6,11 +11,27 @@
 
  const app = express();
 
-// Handle CSP (Content Security Policy)
-app.use((req, res, next) => {
-  res.setHeader("Content-Security-Policy", "default-src 'self'; connect-src 'self' http://localhost:5000;");
-  next();
+ app.use(
+  helmet.contentSecurityPolicy({
+    directives: {
+      defaultSrc: ["'self'"],       // server scripts, images, fonts
+      scriptSrc: ["'self'"],        // scripts
+      styleSrc: ["'self'", "'unsafe-inline'"], // styles
+      imgSrc: ["'self'", "data:"],  // images
+      connectSrc: ["'self'"],       // allow fetch/XHR/DevTools
+    },
+  })
+);
+
+app.get("/.well-known/appspecific/com.chrome.devtools.json", (req, res) => {
+  res.json({});
 });
+
+// Handle CSP (Content Security Policy)
+// app.use((req, res, next) => {
+//   res.setHeader("Content-Security-Policy", "default-src 'self'; connect-src 'self' http://localhost:5000;");
+//   next();
+// });
 
  const port = process.env.PORT || 5000;
 
@@ -23,7 +44,6 @@ app.use((req, res, next) => {
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_SECRET}@cluster0.ikm2v.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 // "mongodb+srv://polling_station_db_user:VWBWydTDxADFrwFc@cluster0.ikm2v.mongodb.net/?appName=Cluster0";
-
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
   serverApi: {
@@ -52,6 +72,113 @@ async function run() {
     const rabCollection = client.db("pollingStation").collection("rabs");
     const magistrateCollection = client.db("pollingStation").collection("magistrates");
     const mapCollection = client.db("pollingStation").collection("maps");
+    const contactCollection = client.db("pollingStation").collection("contacts");
+    const fileDataCollection = client.db("pollingStation").collection("voteKendroInfo");
+
+
+
+    // Configure multer for file storage
+    const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+    cb(null, './uploads'); // Files will be saved in the 'uploads' directory
+    },
+    filename: (req, file, cb) => {
+      cb(null, file.originalname);
+      }
+    });
+    const upload = multer({ storage: storage });
+
+  // API endpoint to handle file upload and data import
+  app.post('/api/upload-excel', upload.single('excelFile'), async (req, res) => {
+
+  if (!req.file) {
+    return res.status(400).send('No file uploaded.');
+  }
+  const filePath = req.file.path;
+  try {
+    // 1. Read the Excel file
+    const workbook = xlsx.readFile(filePath);
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    // Convert sheet to JSON array
+    const jsonData = xlsx.utils.sheet_to_json(sheet);
+
+    // 3. Insert the JSON data into the collection
+    if (jsonData.length > 0) {
+      const insertResult = await fileDataCollection.insertMany(jsonData);
+      console.log(`${insertResult.insertedCount} documents inserted`);
+      // Optional: remove the file after import
+      // fs.unlinkSync(filePath); 
+      res.status(200).json({ message: 'Data imported successfully', count: insertResult.insertedCount });
+    } else {
+      res.status(400).json({ message: 'No data found in the Excel file' });
+    }
+
+   } catch (error) {
+    console.error('Error during import:', error);
+    res.status(500).json({ message: 'Error importing data', error: error.message });
+   } finally {
+    // 4. Close the MongoDB connection
+    // await client.close();
+   }
+  });
+
+    // Contacts route
+    app.post("/contacts", async (req, res) => {
+        const contactInfo = req.body;
+        const result = await contactCollection.insertOne(contactInfo);
+        res.send(result);
+      });
+
+      app.get("/contacts", async (req, res) => {
+        const query = contactCollection.find();
+        const result = await query.toArray();
+        res.send(result);
+      });
+
+      // filter by selected Upazila
+      app.get("/contacts/contact/:id", async (req, res) => {
+          const id = req.params.id;
+           const Query = { upazilaID: id };
+           const Result = await contactCollection.find(Query).toArray();
+           res.send(Result);
+      });
+
+      app.delete("/contact/:id", async (req, res) => {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await contactCollection.deleteOne(query);
+        res.send(result);
+      });
+  
+      app.get("/contact/:id", async (req, res) => {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await contactCollection.findOne(query);
+        res.send(result);
+      });
+
+       app.put("/contact/:id", async (req, res) => {
+        const rId = req.params.id;
+        const contactInfo = req.body;
+        const filter = { _id: new ObjectId(rId) };
+        const option = { upsert: true };
+        
+        const updatedData = {
+          $set: {
+            contactPersonName: contactInfo.contactPersonName,
+            designation: contactInfo.designation,
+            mobile: contactInfo.mobile,
+          },
+        };
+
+        const result = await contactCollection.updateOne(
+          filter,
+          updatedData,
+          option
+        );
+        res.send(result);
+      });
 
     // map route
     app.post("/maps", async (req, res) => {
@@ -107,7 +234,6 @@ async function run() {
         res.send(result);
       });
 
-
    // magistrate route
     app.post("/magistrates", async (req, res) => {
         const magistrateInfo = req.body;
@@ -155,6 +281,28 @@ async function run() {
             designation: magistrateInfo.designation,
             mobile: magistrateInfo.mobile,
             pollingStations: magistrateInfo.pollingStations,
+            liveLink: magistrateInfo.liveLink,
+          },
+        };
+
+        const result = await magistrateCollection.updateOne(
+          filter,
+          updatedData,
+          option
+        );
+        res.send(result);
+      });
+
+      // update live location
+      app.put("/update/magistrate/:id", async (req, res) => {
+        const mId = req.params.id;
+        const liveLocationInfo = req.body;
+        const filter = { _id: new ObjectId(mId) };
+        const option = { upsert: true };
+        
+        const updatedData = {
+          $set: {
+            liveLink: liveLocationInfo.liveLink,
           },
         };
 
@@ -477,7 +625,7 @@ async function run() {
 
       app.get("/loadUnion/:id", async (req, res) => {
         const id = req.params.id;
-        //  console.log("UNION DATA FUNCTION CALL");
+        console.log("UNION DATA FUNCTION CALL", id);
         const query = { upazilaID: id };
         const result = await unionCollection.find(query).toArray();;
         res.send(result);
