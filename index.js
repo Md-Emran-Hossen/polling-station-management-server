@@ -1,7 +1,8 @@
- const express = require("express");
-
- const multer = require('multer');
- const xlsx = require('xlsx');
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const express = require("express");
+const multer = require('multer');
+const xlsx = require('xlsx');
 
  const helmet = require("helmet");
  const cors = require("cors");
@@ -56,7 +57,9 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
+
    await client.connect();
+   
     // Send a ping to confirm a successful connection
 
     const districtCollection = client.db("pollingStation").collection("districts");
@@ -73,19 +76,41 @@ async function run() {
     const magistrateCollection = client.db("pollingStation").collection("magistrates");
     const mapCollection = client.db("pollingStation").collection("maps");
     const contactCollection = client.db("pollingStation").collection("contacts");
-    const fileDataCollection = client.db("pollingStation").collection("voteKendroInfo");
+    const voteDataCollection = client.db("pollingStation").collection("voteCenterData");
 
-
-
-    // Configure multer for file storage
-    const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-    cb(null, './uploads'); // Files will be saved in the 'uploads' directory
+  
+    // remote server for file upload
+  //  CLOUDINARY_URL=cloudinary://841385259261594:vsF4ftVkmsPKadrXyyMx--rpNqw@dyl8vmcai
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  });
+ 
+  const storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+        folder: "excel-files", // Optional: specify a folder in Cloudinary
+        resource_type: "raw", // Crucial for non-image/video files
+        allowed_formats: ["xls", "xlsx"], // Specify Excel formats
+        // You can also dynamically generate the public_id using a function
+        public_id: (req, file) => {
+            return new Date().toISOString().replace(/:/g, "-") + "-" + file.originalname;
+        },
     },
-    filename: (req, file, cb) => {
-      cb(null, file.originalname);
-      }
-    });
+  });
+ 
+    //<--- Configure multer for file storage within projects folder--->
+
+    // const storage = multer.diskStorage({
+    // destination: (req, file, cb) => {
+    // cb(null, './uploads'); // Files will be saved in the 'uploads' directory
+    // },
+    // filename: (req, file, cb) => {
+    //   cb(null, file.originalname);
+    //   }
+    // });
+
     const upload = multer({ storage: storage });
 
   // API endpoint to handle file upload and data import
@@ -105,7 +130,7 @@ async function run() {
 
     // 3. Insert the JSON data into the collection
     if (jsonData.length > 0) {
-      const insertResult = await fileDataCollection.insertMany(jsonData);
+      const insertResult = await voteDataCollection.insertMany(jsonData);
       console.log(`${insertResult.insertedCount} documents inserted`);
       // Optional: remove the file after import
       // fs.unlinkSync(filePath); 
@@ -113,7 +138,6 @@ async function run() {
     } else {
       res.status(400).json({ message: 'No data found in the Excel file' });
     }
-
    } catch (error) {
     console.error('Error during import:', error);
     res.status(500).json({ message: 'Error importing data', error: error.message });
@@ -122,6 +146,71 @@ async function run() {
     // await client.close();
    }
   });
+    app.get("/file", async (req, res) => {
+        const query = voteDataCollection.find();
+        const result = await query.toArray();
+        res.send(result);
+      });
+    app.delete("/file/data/:id", async (req, res) => {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await voteDataCollection.deleteOne(query);
+        res.send(result);
+      });
+      // filter by selected Upazila
+      app.get("/file/data/upazila/:id", async (req, res) => {
+          const id = req.params.id;
+           const Query = { upazilaID: id };
+           const Result = await voteDataCollection.find(Query).toArray();
+           res.send(Result);
+      });
+
+      // filter by selected union
+      app.get("/file/data/union/:id", async (req, res) => {
+        const id = req.params.id;
+           const Query = { unionID: id };
+           const Result = await voteDataCollection.find(Query).toArray();
+           res.send(Result);
+      });
+    app.put("/file/data/:id", async (req, res) => {
+        const vId = req.params.id;
+        const voteKendroInfo = req.body;
+        const filter = { _id: new ObjectId(vId) };
+        const option = { upsert: true };
+        
+        const updatedData = {
+          $set: {
+                  districtName: voteKendroInfo.districtName,
+                  upazilaName: voteKendroInfo.upazilaName,
+                  unionName: voteKendroInfo.unionName,
+                  pollingStationNo: voteKendroInfo.pollingStationNo, 
+                  pollingStationName: voteKendroInfo.pollingStationName, 
+                  numberOfBooth: voteKendroInfo.numberOfBooth, 
+                  wordNoAndVillage: voteKendroInfo.wordNoAndVillage,
+                  pollingStationType: voteKendroInfo.pollingStationType,
+                  pollingStationStatus: voteKendroInfo.pollingStationStatus,
+                  pollingStationStatusText: voteKendroInfo.pollingStationStatusText,
+                  permanentBooth: voteKendroInfo.permanentBooth,
+                  temporaryBooth: voteKendroInfo.temporaryBooth,
+                  male: voteKendroInfo.male,
+                  female: voteKendroInfo.female,
+                  thirdGender: voteKendroInfo.thirdGender,
+                  totalVoter: voteKendroInfo.totalVoter,
+                  parliamentarySeat: voteKendroInfo.parliamentarySeat,
+                  mapInfo: voteKendroInfo.mapInfo,
+                  prisidingOffcer: voteKendroInfo.prisidingOffcer,
+                  mobile: voteKendroInfo.mobile,
+                  subInspector : voteKendroInfo.subInspector,
+                  siMobile : voteKendroInfo.siMobile,
+          },
+        };
+        const result = await voteDataCollection.updateOne(
+          filter,
+          updatedData,
+          option
+        );
+        res.send(result);
+      });
 
     // Contacts route
     app.post("/contacts", async (req, res) => {
@@ -827,7 +916,6 @@ async function run() {
                   siMobile : pollingStation.siMobile,
           },
         };
-
         const result = await pollingStationCollection.updateOne(
           filter,
           updatedData,
