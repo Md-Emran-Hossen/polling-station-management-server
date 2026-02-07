@@ -3,6 +3,8 @@ const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const express = require("express");
 const multer = require('multer');
 const xlsx = require('xlsx');
+const fs = require('fs');
+const path = require("path");
 
  const helmet = require("helmet");
  const cors = require("cors");
@@ -80,25 +82,69 @@ async function run() {
 
   
     // remote server for file upload
-  //  CLOUDINARY_URL=cloudinary://841385259261594:vsF4ftVkmsPKadrXyyMx--rpNqw@dyl8vmcai
   cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
     api_key: process.env.CLOUDINARY_API_KEY,
     api_secret: process.env.CLOUDINARY_API_SECRET,
   });
  
-  const storage = new CloudinaryStorage({
-    cloudinary: cloudinary,
-    params: {
-        folder: "excel-files", // Optional: specify a folder in Cloudinary
-        resource_type: "raw", // Crucial for non-image/video files
-        allowed_formats: ["xls", "xlsx"], // Specify Excel formats
-        // You can also dynamically generate the public_id using a function
-        public_id: (req, file) => {
-            return new Date().toISOString().replace(/:/g, "-") + "-" + file.originalname;
-        },
+ // Multer setup for temporary disk storage
+  const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+      cb(null, "./uploads");
+    },
+    filename: (req, file, cb) => {
+      cb(null, Date.now() + "-" + file.originalname);
     },
   });
+
+  const upload = multer({ storage: storage });
+
+  app.post("/api/upload-excel", upload.single("file"), async (req, res) => {
+    if (!req.file) {
+      return res.status(400).send("No file uploaded.");
+    }
+    const filePath = req.file.path;
+    try {
+      // 1. Upload file to Cloudinary
+      // Use resource_type: "raw" for non-image files like xlsx
+      const cloudinaryResponse = await cloudinary.uploader.upload(filePath, {
+        resource_type: "raw",
+        folder: "excel_uploads",
+      });
+
+      console.log("File uploaded to Cloudinary:", cloudinaryResponse.url);
+
+      // 2. Parse the Excel file data
+      const workbook = xlsx.readFile(filePath);
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const jsonData = xlsx.utils.sheet_to_json(worksheet);
+
+      if (jsonData.length > 0) {
+        const insertResult = await voteDataCollection.insertMany(jsonData);
+        console.log(`${insertResult.insertedCount} documents inserted into MongoDB`);
+      }
+
+      // 4. Clean up the temporary local file
+      fs.unlinkSync(filePath);
+
+      res.status(200).json({
+        message: "File uploaded and data saved successfully!",
+        cloudinaryUrl: cloudinaryResponse.url,
+        insertedCount: jsonData.length,
+      });
+
+    } catch (error) {
+      console.error("Error processing file:", error);
+      // Clean up the local file in case of an error
+      if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+      }
+      res.status(500).send("Error processing file.");
+    }
+  });
+
  
     //<--- Configure multer for file storage within projects folder--->
 
@@ -111,41 +157,42 @@ async function run() {
     //   }
     // });
 
-    const upload = multer({ storage: storage });
+    // const upload = multer({ storage: storage });
 
   // API endpoint to handle file upload and data import
-  app.post('/api/upload-excel', upload.single('excelFile'), async (req, res) => {
+  // app.post('/api/upload-excel', upload.single('excelFile'), async (req, res) => {
+  //   console.log("FUNCTION CALLED");
+  //     if (!req.file) {
+  //       return res.status(400).send('No file uploaded.');
+  //     }
+  //     const filePath = req.file.path;
+  //     try {
+  //       // 1. Read the Excel file
+  //       const workbook = xlsx.readFile(filePath);
+  //       const sheetName = workbook.SheetNames[0];
+  //       const sheet = workbook.Sheets[sheetName];
+  //       // Convert sheet to JSON array
+  //       const jsonData = xlsx.utils.sheet_to_json(sheet);
 
-  if (!req.file) {
-    return res.status(400).send('No file uploaded.');
-  }
-  const filePath = req.file.path;
-  try {
-    // 1. Read the Excel file
-    const workbook = xlsx.readFile(filePath);
-    const sheetName = workbook.SheetNames[0];
-    const sheet = workbook.Sheets[sheetName];
-    // Convert sheet to JSON array
-    const jsonData = xlsx.utils.sheet_to_json(sheet);
+  //       // 3. Insert the JSON data into the collection
+  //       if (jsonData.length > 0) {
+  //         const insertResult = await voteDataCollection.insertMany(jsonData);
+  //         console.log(`${insertResult.insertedCount} documents inserted`);
+  //         // Optional: remove the file after import
+  //          fs.unlinkSync(filePath); 
+  //         res.status(200).json({ message: 'Data imported successfully', count: insertResult.insertedCount });
+  //       } else {
+  //         res.status(400).json({ message: 'No data found in the Excel file' });
+  //       }
+  //     } catch (error) {
+  //       console.error('Error during import:', error);
+  //       res.status(500).json({ message: 'Error importing data', error: error.message });
+  //     } finally {
+  //       // 4. Close the MongoDB connection
+  //       // await client.close();
+  //     }
+  //   });
 
-    // 3. Insert the JSON data into the collection
-    if (jsonData.length > 0) {
-      const insertResult = await voteDataCollection.insertMany(jsonData);
-      console.log(`${insertResult.insertedCount} documents inserted`);
-      // Optional: remove the file after import
-      // fs.unlinkSync(filePath); 
-      res.status(200).json({ message: 'Data imported successfully', count: insertResult.insertedCount });
-    } else {
-      res.status(400).json({ message: 'No data found in the Excel file' });
-    }
-   } catch (error) {
-    console.error('Error during import:', error);
-    res.status(500).json({ message: 'Error importing data', error: error.message });
-   } finally {
-    // 4. Close the MongoDB connection
-    // await client.close();
-   }
-  });
     app.get("/file", async (req, res) => {
         const query = voteDataCollection.find();
         const result = await query.toArray();
