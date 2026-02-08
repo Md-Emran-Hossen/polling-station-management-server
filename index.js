@@ -405,7 +405,7 @@ async function run() {
         res.send(result);
       });
 
-       app.put("/magistrate/:id", async (req, res) => {
+      app.put("/magistrate/:id", async (req, res) => {
         const mId = req.params.id;
         const magistrateInfo = req.body;
         const filter = { _id: new ObjectId(mId) };
@@ -415,9 +415,9 @@ async function run() {
           $set: {
             magistrateName: magistrateInfo.magistrateName,
             designation: magistrateInfo.designation,
-            mobile: magistrateInfo.mobile,
-            pollingStations: magistrateInfo.pollingStations,
-            liveLink: magistrateInfo.liveLink,
+            attachedArea: magistrateInfo.attachedArea,
+             mobile: magistrateInfo.mobile,
+            // liveLink: magistrateInfo.liveLink,
           },
         };
 
@@ -450,8 +450,8 @@ async function run() {
         res.send(result);
       });
 
-     // RAB route
-    app.post("/rabs", async (req, res) => {
+      // RAB route
+      app.post("/rabs", async (req, res) => {
         const rabInfo = req.body;
         const result = await rabCollection.insertOne(rabInfo);
         res.send(result);
@@ -485,7 +485,7 @@ async function run() {
         res.send(result);
       });
 
-       app.put("/rab/:id", async (req, res) => {
+      app.put("/rab/:id", async (req, res) => {
         const rId = req.params.id;
         const rabInfo = req.body;
         const filter = { _id: new ObjectId(rId) };
@@ -495,6 +495,7 @@ async function run() {
           $set: {
             rabName: rabInfo.rabName,
             designation: rabInfo.designation,
+            attachedArea: armyInfo.attachedArea,
             mobile: rabInfo.mobile,
           },
         };
@@ -508,7 +509,7 @@ async function run() {
       });
 
     // Police route
-     app.post("/polices", async (req, res) => {
+      app.post("/polices", async (req, res) => {
         const policeInfo = req.body;
         const result = await policeCollection.insertOne(policeInfo);
         res.send(result);
@@ -551,6 +552,7 @@ async function run() {
           $set: {
             policeName: policeInfo.policeName,
             designation: policeInfo.designation,
+            attachedArea: armyInfo.attachedArea,
             mobile: policeInfo.mobile,
           },
         };
@@ -598,7 +600,7 @@ async function run() {
         res.send(result);
       });
 
-       app.put("/bgb/:id", async (req, res) => {
+      app.put("/bgb/:id", async (req, res) => {
         const bId = req.params.id;
         const bgbInfo = req.body;
         const filter = { _id: new ObjectId(bId) };
@@ -608,6 +610,7 @@ async function run() {
           $set: {
             bgbName: bgbInfo.bgbName,
             designation: bgbInfo.designation,
+            attachedArea: armyInfo.attachedArea,
             mobile: bgbInfo.mobile,
           },
         };
@@ -655,7 +658,7 @@ async function run() {
         res.send(result);
       });
 
-       app.put("/army/:id", async (req, res) => {
+      app.put("/army/:id", async (req, res) => {
         const aId = req.params.id;
         const armyInfo = req.body;
         const filter = { _id: new ObjectId(aId) };
@@ -665,6 +668,7 @@ async function run() {
           $set: {
             armyName: armyInfo.armyName,
             designation: armyInfo.designation,
+            attachedArea: armyInfo.attachedArea,
             mobile: armyInfo.mobile,
           },
         };
@@ -910,7 +914,7 @@ async function run() {
         res.send(result);
       });
 
-       app.get("/pollingStations/pollingStation/:id", async (req, res) => {
+      app.get("/pollingStations/pollingStation/:id", async (req, res) => {
         const id = req.params.id;
            const Query = { districtID: id };
            const Result = await pollingStationCollection.find(Query).toArray();
