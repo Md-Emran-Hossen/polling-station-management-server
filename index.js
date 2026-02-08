@@ -14,27 +14,35 @@ const path = require("path");
 
  const app = express();
 
+
  app.use(
   helmet.contentSecurityPolicy({
     directives: {
-      defaultSrc: ["'self'"],       // server scripts, images, fonts
-      scriptSrc: ["'self'"],        // scripts
-      styleSrc: ["'self'", "'unsafe-inline'"], // styles
-      imgSrc: ["'self'", "data:"],  // images
-      connectSrc: ["'self'"],       // allow fetch/XHR/DevTools
+      defaultSrc: ["'self'"],
+      connectSrc: [
+        "'self'",
+        "http://localhost:5000",
+        "https://polling-station-api.vercel.app"
+      ],
     },
   })
 );
 
+//  app.use(
+//   helmet.contentSecurityPolicy({
+//     directives: {
+//       defaultSrc: ["'self'"],       // server scripts, images, fonts
+//       scriptSrc: ["'self'"],        // scripts
+//       styleSrc: ["'self'", "'unsafe-inline'"], // styles
+//       imgSrc: ["'self'", "data:"],  // images
+//       connectSrc: ["'self'"],       // allow fetch/XHR/DevTools
+//     },
+//   })
+// );
+
 app.get("/.well-known/appspecific/com.chrome.devtools.json", (req, res) => {
   res.json({});
 });
-
-// Handle CSP (Content Security Policy)
-// app.use((req, res, next) => {
-//   res.setHeader("Content-Security-Policy", "default-src 'self'; connect-src 'self' http://localhost:5000;");
-//   next();
-// });
 
  const port = process.env.PORT || 5000;
 
@@ -78,10 +86,10 @@ async function run() {
     const magistrateCollection = client.db("pollingStation").collection("magistrates");
     const mapCollection = client.db("pollingStation").collection("maps");
     const contactCollection = client.db("pollingStation").collection("contacts");
-    const voteDataCollection = client.db("pollingStation").collection("voteCenterData");
+    const voteDataCollection = client.db("pollingStation").collection("pollingStations");
 
   
-    // remote server for file upload
+  // remote server for file upload
   cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
     api_key: process.env.CLOUDINARY_API_KEY,
@@ -191,14 +199,14 @@ async function run() {
   //       // 4. Close the MongoDB connection
   //       // await client.close();
   //     }
-  //   });
+  // });
 
-    app.get("/file", async (req, res) => {
+      app.get("/file", async (req, res) => {
         const query = voteDataCollection.find();
         const result = await query.toArray();
         res.send(result);
       });
-    app.delete("/file/data/:id", async (req, res) => {
+      app.delete("/file/data/:id", async (req, res) => {
         const id = req.params.id;
         const query = { _id: new ObjectId(id) };
         const result = await voteDataCollection.deleteOne(query);
@@ -219,7 +227,7 @@ async function run() {
            const Result = await voteDataCollection.find(Query).toArray();
            res.send(Result);
       });
-    app.put("/file/data/:id", async (req, res) => {
+      app.put("/file/data/:id", async (req, res) => {
         const vId = req.params.id;
         const voteKendroInfo = req.body;
         const filter = { _id: new ObjectId(vId) };
@@ -259,8 +267,8 @@ async function run() {
         res.send(result);
       });
 
-    // Contacts route
-    app.post("/contacts", async (req, res) => {
+      // Contacts route
+      app.post("/contacts", async (req, res) => {
         const contactInfo = req.body;
         const result = await contactCollection.insertOne(contactInfo);
         res.send(result);
@@ -316,8 +324,8 @@ async function run() {
         res.send(result);
       });
 
-    // map route
-    app.post("/maps", async (req, res) => {
+      // map route
+      app.post("/maps", async (req, res) => {
         const mapInfo = req.body;
         const result = await mapCollection.insertOne(mapInfo);
         res.send(result);
@@ -343,7 +351,7 @@ async function run() {
         res.send(result);
       });
 
-       // filter by selected Upazila
+      // filter by selected Upazila
       app.get("/maps/map/:id", async (req, res) => {
           const id = req.params.id;
           const Query = { upazilaID: id };
@@ -370,8 +378,8 @@ async function run() {
         res.send(result);
       });
 
-   // magistrate route
-    app.post("/magistrates", async (req, res) => {
+      // magistrate route
+      app.post("/magistrates", async (req, res) => {
         const magistrateInfo = req.body;
         const result = await magistrateCollection.insertOne(magistrateInfo);
         res.send(result);
@@ -383,7 +391,7 @@ async function run() {
         res.send(result);
       });
 
-       // filter by selected Upazila
+      // filter by selected Upazila
       app.get("/magistrates/magistrate/:id", async (req, res) => {
           const id = req.params.id;
            const Query = { upazilaID: id };
@@ -495,7 +503,7 @@ async function run() {
           $set: {
             rabName: rabInfo.rabName,
             designation: rabInfo.designation,
-            attachedArea: armyInfo.attachedArea,
+            attachedArea: rabInfo.attachedArea,
             mobile: rabInfo.mobile,
           },
         };
@@ -508,7 +516,7 @@ async function run() {
         res.send(result);
       });
 
-    // Police route
+      // Police route
       app.post("/polices", async (req, res) => {
         const policeInfo = req.body;
         const result = await policeCollection.insertOne(policeInfo);
@@ -552,7 +560,7 @@ async function run() {
           $set: {
             policeName: policeInfo.policeName,
             designation: policeInfo.designation,
-            attachedArea: armyInfo.attachedArea,
+            attachedArea: policeInfo.attachedArea,
             mobile: policeInfo.mobile,
           },
         };
@@ -565,8 +573,8 @@ async function run() {
         res.send(result);
       });
 
-    // BGB route
-    app.post("/bgbs", async (req, res) => {
+      // BGB route
+      app.post("/bgbs", async (req, res) => {
         const bgbInfo = req.body;
         const result = await bgbCollection.insertOne(bgbInfo);
         res.send(result);
@@ -578,7 +586,7 @@ async function run() {
         res.send(result);
       });
 
-       // filter by selected Upazila
+      // filter by selected Upazila
       app.get("/bgbs/bgb/:id", async (req, res) => {
           const id = req.params.id;
            const Query = { upazilaID: id };
@@ -610,7 +618,7 @@ async function run() {
           $set: {
             bgbName: bgbInfo.bgbName,
             designation: bgbInfo.designation,
-            attachedArea: armyInfo.attachedArea,
+            attachedArea: bgbInfo.attachedArea,
             mobile: bgbInfo.mobile,
           },
         };
@@ -623,8 +631,8 @@ async function run() {
         res.send(result);
       });
 
-    // Army route
-    app.post("/armys", async (req, res) => {
+      // Army route
+      app.post("/armys", async (req, res) => {
         const armys = req.body;
         const result = await armyCollection.insertOne(armys);
         res.send(result);
@@ -636,7 +644,7 @@ async function run() {
         res.send(result);
       });
 
-       // filter by selected Upazila
+      // filter by selected Upazila
       app.get("/armys/army/:id", async (req, res) => {
           const id = req.params.id;
            const Query = { upazilaID: id };
@@ -733,8 +741,7 @@ async function run() {
       });
 
       // Upazila Route
-
-       app.post("/upazilas", async (req, res) => {
+      app.post("/upazilas", async (req, res) => {
         const upazilas = req.body;
          console.log("Upazila Info: ", upazilas);
         const result = await upazilaCollection.insertOne(upazilas);
@@ -755,7 +762,7 @@ async function run() {
         res.send(result);
       });
 
-    app.get("/loadUpazila/:id", async (req, res) => {
+      app.get("/loadUpazila/:id", async (req, res) => {
         const id = req.params.id;
         // console.log("UPAZILA DATA FUNCTION CALL");
         const query = { districtID: id };
@@ -799,7 +806,7 @@ async function run() {
 
       // Union Route
 
-       app.post("/unions", async (req, res) => {
+      app.post("/unions", async (req, res) => {
         const unionData = req.body;
         const result = await unionCollection.insertOne(unionData);
         res.send(result);
@@ -825,7 +832,7 @@ async function run() {
         res.send(result);
       });
 
-       app.put("/union/:id", async (req, res) => {
+      app.put("/union/:id", async (req, res) => {
         const uId = req.params.id;
         console.log("Update Data Found",uId);
         const union = req.body;
@@ -846,8 +853,7 @@ async function run() {
         res.send(result);
       });
 
-       // Polling Station Route
-
+      // Polling Station Route
       app.post("/pollingStations", async (req, res) => {
         const pollingStationData = req.body;
         const result = await pollingStationCollection.insertOne(pollingStationData);
@@ -860,7 +866,7 @@ async function run() {
         res.send(result);
       });
 
-     // fetch data from join collections 
+      // fetch data from join collections 
       app.get("/aggregated-pollingStations", async (req, res) => {
               try {
             // const ordersCollection = db.collection('orders');
@@ -898,7 +904,7 @@ async function run() {
             console.error(error);
             res.status(500).send('Error aggregating data');
           }
-        });
+      });
 
       app.delete("/pollingStation/:id", async (req, res) => {
         const id = req.params.id;
@@ -921,6 +927,23 @@ async function run() {
            res.send(Result);
       });
 
+      // search by character
+      app.get("search", async (req, res) => {
+        const query = req.query.q;
+          try {
+            const result = await pollingStationCollection
+              .createIndex({ pollingStationName: "text" })
+              .find({
+                 $text: { $search: query }  // বাংলা Regex Search
+              })
+              .toArray();
+
+            res.json(result);
+          } catch (error) {
+            res.status(500).json({ message: "Search Error", error });
+          }
+      });
+
       // filter by selected Upazila
       app.get("/pollingStations/pollingStation/upazila/:id", async (req, res) => {
           const id = req.params.id;
@@ -937,7 +960,7 @@ async function run() {
            res.send(Result);
       });
 
-       app.put("/pollingStation/:id", async (req, res) => {
+      app.put("/pollingStation/:id", async (req, res) => {
         const psId = req.params.id;
         const pollingStation = req.body;
         const filter = { _id: new ObjectId(psId) };
@@ -975,9 +998,8 @@ async function run() {
         res.send(result);
       });
 
-       // Summary Route
-
-       app.post("/summaryInformations", async (req, res) => {
+      // Summary Route
+      app.post("/summaryInformations", async (req, res) => {
         const summaryData = req.body;
         const result = await summaryCollection.insertOne(summaryData);
         // console.log("Summary Data: ", result);
