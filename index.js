@@ -83,6 +83,7 @@ async function run() {
     const bgbCollection = client.db("pollingStation").collection("bgbs");
     const policeCollection = client.db("pollingStation").collection("polices");
     const rabCollection = client.db("pollingStation").collection("rabs");
+    const ansarCollection = client.db("pollingStation").collection("ansars");
     const magistrateCollection = client.db("pollingStation").collection("magistrates");
     const judicialMagistrateCollection = client.db("pollingStation").collection("judicialMagistrates");
     const mapCollection = client.db("pollingStation").collection("maps");
@@ -531,6 +532,64 @@ async function run() {
         };
 
         const result = await magistrateCollection.updateOne(
+          filter,
+          updatedData,
+          option
+        );
+        res.send(result);
+      });
+
+      // Ansar route
+      app.post("/ansars", async (req, res) => {
+        const ansarInfo = req.body;
+        const result = await ansarCollection.insertOne(ansarInfo);
+        res.send(result);
+      });
+
+      app.get("/ansars", async (req, res) => {
+        const query = ansarCollection.find();
+        const result = await query.toArray();
+        res.send(result);
+      });
+
+      // filter by selected Upazila
+      app.get("/ansars/ansar/:id", async (req, res) => {
+          const id = req.params.id;
+           const Query = { upazilaID: id };
+           const Result = await ansarCollection.find(Query).toArray();
+           res.send(Result);
+      });
+
+      app.delete("/ansar/:id", async (req, res) => {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await ansarCollection.deleteOne(query);
+        res.send(result);
+      });
+  
+      app.get("/ansar/:id", async (req, res) => {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await ansarCollection.findOne(query);
+        res.send(result);
+      });
+
+      app.put("/ansar/:id", async (req, res) => {
+        const aId = req.params.id;
+        const ansarInfo = req.body;
+        const filter = { _id: new ObjectId(aId) };
+        const option = { upsert: true };
+        
+        const updatedData = {
+          $set: {
+            ansarName: ansarInfo.ansarName,
+            designation: ansarInfo.designation,
+            attachedArea: ansarInfo.attachedArea,
+            mobile: ansarInfo.mobile,
+          },
+        };
+
+        const result = await ansarCollection.updateOne(
           filter,
           updatedData,
           option
