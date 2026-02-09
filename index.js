@@ -84,6 +84,7 @@ async function run() {
     const policeCollection = client.db("pollingStation").collection("polices");
     const rabCollection = client.db("pollingStation").collection("rabs");
     const magistrateCollection = client.db("pollingStation").collection("magistrates");
+    const judicialMagistrateCollection = client.db("pollingStation").collection("judicialMagistrates");
     const mapCollection = client.db("pollingStation").collection("maps");
     const contactCollection = client.db("pollingStation").collection("contacts");
     const voteDataCollection = client.db("pollingStation").collection("pollingStations");
@@ -378,7 +379,86 @@ async function run() {
         res.send(result);
       });
 
-      // magistrate route
+      // Judicial magistrate route
+      app.post("/judicial/magistrates", async (req, res) => {
+        const magistrateInfo = req.body;
+        const result = await judicialMagistrateCollection.insertOne(magistrateInfo);
+        res.send(result);
+      });
+
+      app.get("/judicial/magistrates", async (req, res) => {
+        const query = judicialMagistrateCollection.find();
+        const result = await query.toArray();
+        res.send(result);
+      });
+
+      // filter by selected Upazila
+      app.get("/judicial/magistrates/upazila/:id", async (req, res) => {
+          const id = req.params.id;
+           const Query = { upazilaID: id };
+           const Result = await judicialMagistrateCollection.find(Query).toArray();
+           res.send(Result);
+      });
+
+      app.delete("/judicial/magistrate/:id", async (req, res) => {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await judicialMagistrateCollection.deleteOne(query);
+        res.send(result);
+      });
+  
+      app.get("/judicial/magistrate/:id", async (req, res) => {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await judicialMagistrateCollection.findOne(query);
+        res.send(result);
+      });
+
+      app.put("/judicial/magistrate/:id", async (req, res) => {
+        const mId = req.params.id;
+        const magistrateInfo = req.body;
+        const filter = { _id: new ObjectId(mId) };
+        const option = { upsert: true };
+        
+        const updatedData = {
+          $set: {
+            magistrateName: magistrateInfo.magistrateName,
+            designation: magistrateInfo.designation,
+            attachedArea: magistrateInfo.attachedArea,
+            mobile: magistrateInfo.mobile,
+          },
+        };
+
+        const result = await judicialMagistrateCollection.updateOne(
+          filter,
+          updatedData,
+          option
+        );
+        res.send(result);
+      });
+
+      // update live location judicial magistrates
+      app.put("/update/judicial/magistrate/:id", async (req, res) => {
+        const mId = req.params.id;
+        const liveLocationInfo = req.body;
+        const filter = { _id: new ObjectId(mId) };
+        const option = { upsert: true };
+        
+        const updatedData = {
+          $set: {
+            liveLink: liveLocationInfo.liveLink,
+          },
+        };
+
+        const result = await judicialMagistrateCollection.updateOne(
+          filter,
+          updatedData,
+          option
+        );
+        res.send(result);
+      });
+
+      // Executive magistrate route
       app.post("/magistrates", async (req, res) => {
         const magistrateInfo = req.body;
         const result = await magistrateCollection.insertOne(magistrateInfo);
@@ -437,7 +517,7 @@ async function run() {
         res.send(result);
       });
 
-      // update live location
+      // update live location executive magistrates
       app.put("/update/magistrate/:id", async (req, res) => {
         const mId = req.params.id;
         const liveLocationInfo = req.body;
